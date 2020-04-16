@@ -186,8 +186,11 @@ def model(input_shape, classes):
     return model
 
 
-def Train(overlap_ratio_List, range_of_class, Cube_size,  Data, Gt, Train_Test_split, channel, epochs_list, batch_size_list,):
+def Train(overlap_ratio_List, range_of_class, Cube_size,  Data, Gt, Train_Test_split, channel, epochs_list, batch_size_list,data_name):
     for i in range(len(overlap_ratio_List)):
+        print("\n\n===============================================================================================================================\n"
+              "======================================== Data with overlap ratio of "+ str(overlap_ratio_List[i]) + " will be trained ========================================\n"
+              "===============================================================================================================================\n\n")
         overlap_ratio = overlap_ratio_List[i] / 100
         Xtrain, Xtest, Ytrain, Ytest, class_len, counts = prepare_data_for_training(range_of_class=range_of_class,
                                                                                     Cube_size=Cube_size, Data=Data,
@@ -202,9 +205,9 @@ def Train(overlap_ratio_List, range_of_class, Cube_size,  Data, Gt, Train_Test_s
         model_1.summary()
 
         model_checkpoint = ModelCheckpoint(
-            '..\\Trained Models\\Full_Model\\model_full_best_pavia_overlap_ratio_' + str(int(overlap_ratio * 100)) + '_percent.h5',
+            '..\\..\\Trained Models\\Full_Model\\model_full_best_'+ data_name +'_overlap_ratio_' + str(int(overlap_ratio * 100)) + '_percent.h5',
             monitor='val_categorical_accuracy', verbose=1, save_best_only=True)
-        model_1.compile(optimizer=keras.optimizers.SGD(lr=0.0001, decay=1e-5, momentum=0.9, nesterov=True),
+        model_1.compile(optimizer=keras.optimizers.SGD(lr=0.00001, decay=1e-5, momentum=0.9, nesterov=True),
                         loss='categorical_crossentropy', metrics=['categorical_accuracy'])
         model_1.fit(Xtrain, Ytrain, epochs=epochs_list[i], batch_size=batch_size_list[i], validation_data=(Xtest, Ytest), verbose=1,
                     callbacks=[model_checkpoint])
@@ -215,10 +218,24 @@ def Train(overlap_ratio_List, range_of_class, Cube_size,  Data, Gt, Train_Test_s
 
         y_pred = model_1.predict(Xtest, verbose=1)
         confusion_matrix = sklearn.metrics.confusion_matrix(np.argmax(Ytest, axis=1), np.argmax(y_pred, axis=1))
+        print("\n===============================================================================================================================\n"
+              "=============================== Confusion_matrix for data with overlap ratio of  "+ str(overlap_ratio_List[i]) + " is as below ===============================\n"
+              "===============================================================================================================================\n")
         print(confusion_matrix)
+        print("==============================================================================================================================")
         print(counts)
+        print("==============================================================================================================================\n\n"
+              "==============================================================================================================================\n"
+              "=============================== Sub Model below will be saved to be used for transfer learning  ==============================\n"
+              "==============================================================================================================================\n")
+        model_1._layers.pop()
+        model_1._layers.pop()
+        # last_layer = model_1._layers.pop()
+        # second_last_layer = model_1._layers.pop()
+        model_2 =  Model(model_1.inputs, model_1.layers[-1].output)
+        model_2.compile(optimizer=keras.optimizers.SGD(lr=0.00001, decay=1e-5, momentum=0.9, nesterov=True),
+                        loss='categorical_crossentropy', metrics=['categorical_accuracy'])
+        model_2.set_weights(model_1.get_weights())
+        model_2.summary()
 
-        model_new = Model(input=model_1.layers[0].input, output=model_1.layers[35].output)
-        model_new.save(
-            '..\\Trained Models\\Sub_Model\\Sub_model_Transfer_pavia_overlap_ratio_' + str(int(overlap_ratio * 100)) + '_percent.h5')
-        model_new.summary()
+        model_2.save('..\\..\\Trained Models\\Sub_Model\\Sub_model_Transfer_'+ data_name +'_overlap_ratio_' + str(int(overlap_ratio * 100)) + '_percent.h5')
