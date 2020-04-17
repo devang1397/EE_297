@@ -1,5 +1,5 @@
 import numpy as np
-
+import pandas as pd
 import math
 import sklearn.metrics
 
@@ -163,8 +163,8 @@ def feature_extraction(Sample):
     F2 = 32
     X = SR_Unit(X, filters=F2)
 
-    #     F3 = 64
-    #     X = SR_Unit(X, filters=F3)
+    # F3 = 64
+    # X = SR_Unit(X, filters=F3)
 
     #     F4 = 128
     #     X = SR_Unit(X, filters=F4)
@@ -186,11 +186,30 @@ def model(input_shape, classes):
     return model
 
 
-def Train(overlap_ratio_List, range_of_class, Cube_size,  Data, Gt, Train_Test_split, channel, epochs_list, batch_size_list,data_name):
+def Train(overlap_ratio_List,
+          range_of_class,
+          Cube_size,
+          Data,
+          Gt,
+          Train_Test_split,
+          channel,
+          epochs_list,
+          batch_size_list,
+          data_name,
+          Verbosity):
+
+    Accu_Table = [[None for l in range(2)] for n in range(len(overlap_ratio_List)+1)]
+    for k in range(1,len(overlap_ratio_List)+1):
+        Accu_Table[k][0] = 'Data_Overlap_' + str(overlap_ratio_List[k-1])
+    Accu_Table[0][0] = 'Test Accuracy Table'
+    Accu_Table[0][1] = data_name
+    df_ini = pd.DataFrame.from_records(Accu_Table)
+    print(df_ini)
     for i in range(len(overlap_ratio_List)):
         print("\n\n===============================================================================================================================\n"
-              "======================================== Data with overlap ratio of "+ str(overlap_ratio_List[i]) + " will be trained ========================================\n"
+              "======================================== Data with overlap ratio of "+ str(overlap_ratio_List[i]) + "% will be trained ========================================\n"
               "===============================================================================================================================\n\n")
+
         overlap_ratio = overlap_ratio_List[i] / 100
         Xtrain, Xtest, Ytrain, Ytest, class_len, counts = prepare_data_for_training(range_of_class=range_of_class,
                                                                                     Cube_size=Cube_size, Data=Data,
@@ -205,21 +224,21 @@ def Train(overlap_ratio_List, range_of_class, Cube_size,  Data, Gt, Train_Test_s
         model_1.summary()
 
         model_checkpoint = ModelCheckpoint(
-            '..\\..\\Trained Models\\Full_Model\\model_full_best_'+ data_name +'_overlap_ratio_' + str(int(overlap_ratio * 100)) + '_percent.h5',
+            '..\\..\\Trained Models\\Full_Model\\'+data_name+'\\Full_Model_best_'+ data_name +'_overlap_ratio_' + str(int(overlap_ratio * 100)) + '_percent.h5',
             monitor='val_categorical_accuracy', verbose=1, save_best_only=True)
-        model_1.compile(optimizer=keras.optimizers.SGD(lr=0.00001, decay=1e-5, momentum=0.9, nesterov=True),
+        model_1.compile(optimizer=keras.optimizers.SGD(lr=0.0001, decay=1e-5, momentum=0.9, nesterov=True),
                         loss='categorical_crossentropy', metrics=['categorical_accuracy'])
-        model_1.fit(Xtrain, Ytrain, epochs=epochs_list[i], batch_size=batch_size_list[i], validation_data=(Xtest, Ytest), verbose=1,
-                    callbacks=[model_checkpoint])
+        model_1.fit(Xtrain, Ytrain, epochs=epochs_list[i], batch_size=batch_size_list[i],
+                    validation_data=(Xtest, Ytest), verbose=Verbosity , callbacks=[model_checkpoint])
 
         preds = model_1.evaluate(Xtest, Ytest)
         # print ("Loss = " + str(preds[0]))
         print("Test Accuracy = " + str(preds[1]))
-
+        Accu_Table[i+1][1] = preds[1]
         y_pred = model_1.predict(Xtest, verbose=1)
         confusion_matrix = sklearn.metrics.confusion_matrix(np.argmax(Ytest, axis=1), np.argmax(y_pred, axis=1))
         print("\n===============================================================================================================================\n"
-              "=============================== Confusion_matrix for data with overlap ratio of  "+ str(overlap_ratio_List[i]) + " is as below ===============================\n"
+              "=============================== Confusion_matrix for data with overlap ratio of "+ str(overlap_ratio_List[i]) + "% is as below ===============================\n"
               "===============================================================================================================================\n")
         print(confusion_matrix)
         print("==============================================================================================================================")
@@ -233,9 +252,12 @@ def Train(overlap_ratio_List, range_of_class, Cube_size,  Data, Gt, Train_Test_s
         # last_layer = model_1._layers.pop()
         # second_last_layer = model_1._layers.pop()
         model_2 =  Model(model_1.inputs, model_1.layers[-1].output)
-        model_2.compile(optimizer=keras.optimizers.SGD(lr=0.00001, decay=1e-5, momentum=0.9, nesterov=True),
+        model_2.compile(optimizer=keras.optimizers.SGD(lr=0.001, decay=1e-5, momentum=0.9, nesterov=True),
                         loss='categorical_crossentropy', metrics=['categorical_accuracy'])
         model_2.set_weights(model_1.get_weights())
         model_2.summary()
 
-        model_2.save('..\\..\\Trained Models\\Sub_Model\\Sub_model_Transfer_'+ data_name +'_overlap_ratio_' + str(int(overlap_ratio * 100)) + '_percent.h5')
+        model_2.save('..\\..\\Trained Models\\Sub_Model\\'+data_name+'\\Sub_model_Transfer_'+ data_name +'_overlap_ratio_' + str(int(overlap_ratio * 100)) + '_percent.h5')
+
+    df = pd.DataFrame.from_records(Accu_Table)
+    return df
