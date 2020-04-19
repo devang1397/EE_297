@@ -20,15 +20,12 @@ import logging
 logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
 
-def pick_class(Class, Cube_size, Data, Gt, small_segmented_1, small_seg_gt_1, overlap_ratio, ch):
+def pick_class(Class, Cube_size, Data, Gt, small_segmented_1, small_seg_gt_1, overlap_ratio, ch, min_samples = 4):
     indx_class = np.where(Gt == Class)
     all_indx = [[indx_class[0][i], indx_class[1][i]] for i in range(len(indx_class[0])) if
                 len(Gt) - np.ceil(Cube_size / 2) > indx_class[0][i] > np.ceil(Cube_size / 2) and len(Gt[0]) - np.ceil(
                     Cube_size / 2) > indx_class[1][i] > np.ceil(Cube_size / 2)]
     lst = []
-    small_segmented_1.append(np.array(Data[:ch, all_indx[0][0] - int(Cube_size / 2):all_indx[0][0] + int(Cube_size / 2),
-                                      (all_indx[0][1] - int(Cube_size / 2)):all_indx[0][1] + int(Cube_size / 2)]))
-    small_seg_gt_1.append(Class)
     lst.append([all_indx[0][0], all_indx[0][1]])
     for i in range(1, len(all_indx)):
         dist = []
@@ -36,19 +33,24 @@ def pick_class(Class, Cube_size, Data, Gt, small_segmented_1, small_seg_gt_1, ov
             d = math.sqrt((all_indx[i][0] - lst[k][0]) ** 2 + (all_indx[i][1] - lst[k][1]) ** 2)
             dist.append(d)
         if np.min(dist) > int(Cube_size * (1 - overlap_ratio)):
-            small_segmented_1.append(np.array(
-                Data[:ch, all_indx[i][0] - int(Cube_size / 2):all_indx[i][0] + int(Cube_size / 2),
-                (all_indx[i][1] - int(Cube_size / 2)):all_indx[i][1] + int(Cube_size / 2)]))
-            small_seg_gt_1.append(Class)
             lst.append([all_indx[i][0], all_indx[i][1]])
-    return small_segmented_1, small_seg_gt_1, lst
+    new_lst = []
+    if len(lst)>=min_samples:
+        small_segmented_1.append(
+            np.array(Data[:ch, all_indx[0][0] - int(Cube_size / 2):all_indx[0][0] + int(Cube_size / 2),
+                     (all_indx[0][1] - int(Cube_size / 2)):all_indx[0][1] + int(Cube_size / 2)]))
+        small_seg_gt_1.append(Class)
+        for i in range(1, len(lst)):
+            small_segmented_1.append(np.array(Data[:ch, lst[i][0] - int(Cube_size / 2):lst[i][0] + int(Cube_size / 2), (lst[i][1] - int(Cube_size / 2)):lst[i][1] + int(Cube_size / 2)]))
+            small_seg_gt_1.append(Class)
+        new_lst = lst
+    return small_segmented_1, small_seg_gt_1, new_lst
 
 
 def pick_n_class(range_of_class, Cube_size, Data, Gt, small_segmented_1, small_seg_gt_1, overlap_ratio, ch):
     class_len = []
     for i in range_of_class:
-        small_segmented_1, small_seg_gt_1, lst = pick_class(i, Cube_size, Data, Gt, small_segmented_1, small_seg_gt_1,
-                                                            overlap_ratio, ch)
+        small_segmented_1, small_seg_gt_1, lst = pick_class(i, Cube_size, Data, Gt, small_segmented_1, small_seg_gt_1, overlap_ratio, ch)
         class_len.append(len(lst))
     small_segmented_1 = np.array(small_segmented_1)
     small_seg_gt_1 = np.array(small_seg_gt_1)
@@ -89,7 +91,7 @@ def train_test_split(percentage, class_len, Data, Gt):
     Ytest = Ytest[s]
     Xtrain = np.expand_dims(Xtrain, axis=4)
     Xtest = np.expand_dims(Xtest, axis=4)
-    Xtrain.shape, Xtest.shape, Ytrain.shape, Ytest.shape
+    print(Xtrain.shape, Xtest.shape, Ytrain.shape, Ytest.shape)
     values, counts = np.unique(Ytest, return_counts=True)
     print(
         "Total samples per class: " + str(class_len) + ", Total number of samples is " + str(np.sum(class_len)) + '.\n')
@@ -207,7 +209,7 @@ def Train(overlap_ratio_List,
     print(df_ini)
     for i in range(len(overlap_ratio_List)):
         print("\n\n===============================================================================================================================\n"
-              "======================================== Data with overlap ratio of "+ str(overlap_ratio_List[i]) + "% will be trained ========================================\n"
+              "======================================== Data with overlap ratio of "+ str(overlap_ratio_List[i]) + "% will be trained =======================================\n"
               "===============================================================================================================================\n\n")
 
         overlap_ratio = overlap_ratio_List[i] / 100
@@ -220,7 +222,7 @@ def Train(overlap_ratio_List,
               'Xtest  => ' + str(Xtest.shape) + '\n' +
               'Ytrain => ' + str(Ytrain.shape) + '\n' +
               'Ytest  => ' + str(Ytest.shape) + '\n')
-        model_1 = model(input_shape=Xtrain[0].shape, classes=len(range_of_class))
+        model_1 = model(input_shape=Xtrain[0].shape, classes=len(Ytrain[0]))
         model_1.summary()
 
         model_checkpoint = ModelCheckpoint(
@@ -229,7 +231,7 @@ def Train(overlap_ratio_List,
         model_1.compile(optimizer=keras.optimizers.SGD(lr=0.0001, decay=1e-5, momentum=0.9, nesterov=True),
                         loss='categorical_crossentropy', metrics=['categorical_accuracy'])
         model_1.fit(Xtrain, Ytrain, epochs=epochs_list[i], batch_size=batch_size_list[i],
-                    validation_data=(Xtest, Ytest), verbose=Verbosity , callbacks=[model_checkpoint])
+                    validation_data=[Xtest, Ytest], verbose=Verbosity , callbacks=[model_checkpoint])
 
         preds = model_1.evaluate(Xtest, Ytest)
         # print ("Loss = " + str(preds[0]))
