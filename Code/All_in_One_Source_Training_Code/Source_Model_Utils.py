@@ -236,7 +236,7 @@ def Train(overlap_ratio_List,
         preds = model_1.evaluate(Xtest, Ytest)
         # print ("Loss = " + str(preds[0]))
         print("Test Accuracy = " + str(preds[1]))
-        Accu_Table[i+1][1] = preds[1]
+        Accu_Table[i+1][1] = preds[1] * 100
         y_pred = model_1.predict(Xtest, verbose=1)
         confusion_matrix = sklearn.metrics.confusion_matrix(np.argmax(Ytest, axis=1), np.argmax(y_pred, axis=1))
         print("\n===============================================================================================================================\n"

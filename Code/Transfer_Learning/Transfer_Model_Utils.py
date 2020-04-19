@@ -184,7 +184,7 @@ def Transfer(overlap_ratio_List_for_Target,
                 + Target_data_name + '\\Fully_Connected_Layers_for_' + Target_data_name +
                 '_overlap_ratio_' + str(int(overlap_ratio * 100)) +
                 '_With_source_data_as_' + Source_data_name + '_overlap_ratio_' +
-                str(int(overlap_ratio_List_for_Source[m] * 100)) + '_percent.h5',
+                str(int(overlap_ratio_List_for_Source[m])) + '_percent.h5',
                 monitor='val_categorical_accuracy', verbose=1, save_best_only=True)
             model_1.compile(optimizer=keras.optimizers.SGD(lr=0.0001, decay=1e-5, momentum=0.9, nesterov=True),
                             loss='categorical_crossentropy', metrics=['categorical_accuracy'])
@@ -199,9 +199,9 @@ def Transfer(overlap_ratio_List_for_Target,
             y_pred = model_1.predict(Xtest_transfer, verbose=1)
             confusion_matrix = sklearn.metrics.confusion_matrix(np.argmax(Ytest, axis=1), np.argmax(y_pred, axis=1))
             print("\n===============================================================================================================================\n"
-                "============ Confusion_matrix for data with source overlap ratio of " +
-                str(overlap_ratio_List_for_Source[m]) + " and target overlap ratio of  " +
-                str(overlap_ratio_List_for_Target[i]) + " is as below ============\n"
+                "=========== Confusion_matrix for data with source overlap ratio of " +
+                str(overlap_ratio_List_for_Source[m]) + "% and target overlap ratio of  " +
+                str(overlap_ratio_List_for_Target[i]) + "% is as below ===========\n"
                                                         "===============================================================================================================================\n")
             print(confusion_matrix)
             print(
