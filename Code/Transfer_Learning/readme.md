@@ -3,11 +3,11 @@ dataset amongst pavia, Indian pines and salinas hyper spectral datasets. Same da
 
 Code for each combination of source and target outputs a table shown below as the final results
 
-Test Accuracy   Target_50   Target_75    Target_85   Target_95
-Source_50.         Accuracy.   Accuracy.    Accuracy.   Accuracy
-Source_75          Accuracy.   Accuracy.    Accuracy.   Accuracy
-Source_85          Accuracy.   Accuracy.    Accuracy.   Accuracy
-Source_95          Accuracy.   Accuracy.    Accuracy.   Accuracy
+Test Accuracy   	Target_50   Target_75	Target_85 Target_95
+Source_50         	Accuracy	Accuracy	Accuracy	Accuracy
+Source_75	          Accuracy	Accuracy	Accuracy	Accuracy
+Source_85	          Accuracy	Accuracy	Accuracy	Accuracy
+Source_95	          Accuracy	Accuracy	Accuracy	Accuracy
 
 
 50,75,85,95 are the different overlapping ratios used.
