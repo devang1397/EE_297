@@ -6,4 +6,3 @@ Code for each combination of source and target outputs a table with test accurac
 
 The folder also contains a Transfer_Model_Utils python file which has
 all the helper functions to extract samples, create cubes, assign labels for each cube, prepare data for training and the transfer function which does the transfer learning between source and target dataset and outputs the test accuracies for all combinations of overlapping ratios.
-Welcome to EditPad.org - your online plain text editor. Enter or paste your text here. To download and save it, click on the button below.
